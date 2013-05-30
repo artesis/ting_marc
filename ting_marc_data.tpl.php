@@ -1,7 +1,6 @@
 <?php
 /**
  * @file
- *
  * Template for ting_marc_data block.
  *
  * Variables:

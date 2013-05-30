@@ -238,7 +238,7 @@ function ting_marc_theme() {
  * @param array $data
  *   Paceholder data for message.
  */
-function ting_mark_log($message, $data=array()) {
+function ting_mark_log($message, $data = array()) {
   if (variable_get('ting_mark_logging', 0)) {
     watchdog('ting_marc', $message, $data, WATCHDOG_DEBUG);
   }
@@ -253,4 +253,88 @@ function ting_marc_permission() {
       'title' => t('Administer Ting marcXchange settings'),
     ),
   );
+}
+
+/**
+ * Create/update field using ting_marc settings.
+ *
+ * @param array $data
+ *   A field definition array.
+ */
+function ting_marc_create_field($data) {
+  $field_name = $data['field_name'];
+
+  field_delete_field($field_name);
+
+  $field = array(
+    'field_name' => $field_name,
+    'type' => 'ting_marc',
+    'locked' => FALSE,
+    'default_widget' => 'hidden',
+    'no_ui' => TRUE,
+    'entity_types' => array('ting_object'),
+    'storage' => array(
+      'type' => 'virtual_field',
+    ),
+  );
+  field_create_field($field);
+
+  $instance = array(
+    'field_name' => $field_name,
+    'label' => $data['marc_label'],
+    'bundle' => 'ting_object',
+    'entity_type' => 'ting_object',
+    'settings' => array(
+      'ting_type' => $data['ting_type'],
+      'marc_field' => $data['marc_field'],
+      'marc_subfield' => $data['marc_subfield'],
+    ),
+    'widget' => array(
+      'type' => 'hidden',
+    ),
+    'formatter' => array(
+      'type' => 'text_default',
+    ),
+  );
+  field_create_instance($instance);
+}
+
+/**
+ * Implements hook_field_info().
+ *
+ * Define 'ting_marc' field type.
+ */
+function ting_marc_field_info() {
+  return array(
+    'ting_marc' => array(
+      'label' => t('Ting marcXchange'),
+      'description' => t('Ting marcXchange field'),
+      'default_widget' => 'hidden',
+      'default_formatter' => 'text_default',
+      'storage' => array(
+        'type' => 'virtual_field',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_info_alter().
+ */
+function ting_marc_field_formatter_info_alter(&$info) {
+  if (isset($info['hidden'])) {
+    $info['hidden']['field types'][] = 'ting_marc';
+  }
+  if (isset($info['text_default'])) {
+    $info['text_default']['field types'][] = 'ting_marc';
+  }
+}
+
+/**
+ * Implements hook_widget_info_alter().
+ */
+function ting_marc_widget_info_alter(&$info) {
+  if (isset($info['hidden'])) {
+    $info['hidden']['field types'][] = 'ting_marc';
+  }
 }

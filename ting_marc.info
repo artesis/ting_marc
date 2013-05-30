@@ -5,6 +5,8 @@ core = 7.x
 version = 1.12
 
 dependencies[] = ting
+dependencies[] = virtual_field
+dependencies[] = ctools
 
 features[features_api][] = api:1
 features[user_permission][] = administer ting_marc settings
