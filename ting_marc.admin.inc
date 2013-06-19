@@ -193,6 +193,7 @@ function ting_marc_delete_item_confirm_submit($form, &$form_state) {
 function ting_marc_types($pair = FALSE) {
   // Source: http://www.danbib.dk/docs/abm/types.xml
   $types = array(
+    'All',
     'Akvarel',
     'Anmeldelse',
     'Arkitekturtegning',
