@@ -4,7 +4,14 @@ package = Artesis
 core = 7.x
 version = 1.12
 
+config = admin/config/ting/marc/settings
+
+files[] = classes/TingMarcxchangeRequest.php
+files[] = classes/TingMarcxchangeResult.php
+
 dependencies[] = ting
+dependencies[] = virtual_field
+dependencies[] = ctools
 
 features[features_api][] = api:1
 features[user_permission][] = administer ting_marc settings
