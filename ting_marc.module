@@ -265,21 +265,6 @@ function ting_marc_field_load($entity_type, $entities, $field, $instances, $lang
   foreach ($entities as $id => $entity) {
     $items[$id][0]['safe_value'] = '-';
     $items[$id][0]['value'] = '-';
-/*
-    // Check entity type.
-    $types = array($entity->getType(), 'All');
-    if (in_array($instances[$id]['settings']['ting_type'], $types)) {
-      var_dump('load');
-      var_dump($instances[$id]);
-      $value = ting_marc_get_data(
-        $entity->getId(),
-        $instances[$id]['settings']['marc_field'],
-        $instances[$id]['settings']['marc_subfield']
-      );
-      $items[$id][0]['safe_value'] = $value;
-      $items[$id][0]['value'] = $value;
-    }
-    */
   }
 }
 

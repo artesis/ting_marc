@@ -55,17 +55,11 @@ class TingMarcxchangeResult {
         $code = $datafield->getValue('@code');
         $this->_setData($tag, $code, $value);
       }
-      else {
-        if (is_array($subfields)) {
-          foreach ($subfields as $subfield) {
-            $code = $subfield->getValue('@code');
-            $value = $subfield->getValue();
-            $this->_setData($tag, $code, $value);
-          }
-        }
-        else {
-          var_dump($subfields);
-          echo '<pre>'.print_r($data, 1).'<pre>';
+      elseif (is_array($subfields)) {
+        foreach ($subfields as $subfield) {
+          $code = $subfield->getValue('@code');
+          $value = $subfield->getValue();
+          $this->_setData($tag, $code, $value);
         }
       }
     }
