@@ -150,8 +150,20 @@ function ting_marc_create_field($data) {
     'formatter' => array(
       'type' => 'ting_marc_ajax_formatter',
     ),
+    'display' => array(
+      'search_result' => array(
+        'label' => 'above',
+      )
+    )
   );
+
   field_create_instance($instance);
+
+  // Add field to group_content group.
+  $field_group_details = field_group_load_field_group('group_details', 'ting_object', 'ting_object', 'search_result');
+  $field_group_details->children[] = $field_name;
+  field_group_group_save($field_group_details);
+  field_cache_clear();
 }
 
 /**
