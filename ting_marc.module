@@ -153,8 +153,8 @@ function ting_marc_create_field($data) {
     'display' => array(
       'search_result' => array(
         'label' => 'above',
-      )
-    )
+      ),
+    ),
   );
 
   field_create_instance($instance);
