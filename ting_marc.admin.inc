@@ -174,11 +174,19 @@ function ting_marc_delete_item_confirm_submit($form, &$form_state) {
   $id = $form['#marc_id'];
   $form_state['redirect'] = TING_MARC_ADMIN;
 
+  $field = db_select('ting_marc', 'tm')
+    ->fields('tm')
+    ->condition('id', $id,'=')
+    ->execute()
+    ->fetchAssoc();
+
   db_delete('ting_marc')
     ->condition('id', $id)
     ->execute();
 
-  drupal_set_message(t('Setting has been deleted.'));
+  field_delete_field($field['field_name']);
+  field_cache_clear();
+  drupal_set_message(t('Setting and field as been deleted.'));
 }
 
 /**
