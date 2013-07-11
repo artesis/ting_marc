@@ -175,7 +175,7 @@ function ting_marc_delete_item_confirm_submit($form, &$form_state) {
   $form_state['redirect'] = TING_MARC_ADMIN;
 
   $field = db_select('ting_marc', 'tm')
-    ->fields('tm')
+    ->fields('tm', array('field_name'))
     ->condition('id', $id,'=')
     ->execute()
     ->fetchAssoc();
