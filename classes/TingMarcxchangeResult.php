@@ -36,6 +36,7 @@ class TingMarcxchangeResult {
       return;
     }
 
+    $index = 0;
     foreach ($data as $datafield) {
       $tag = $datafield->getValue('@tag');
 
@@ -48,28 +49,30 @@ class TingMarcxchangeResult {
       if (!is_array($subfields) && is_a($subfields, 'JsonOutput')) {
         $code = $subfields->getValue('@code');
         $value = $subfields->getValue();
-        $this->_setData($tag, $code, $value);
+        $this->_setData($tag, $code, $value, $index);
       }
       elseif(is_string($subfields)) {
         $value = $subfields;
         $code = $datafield->getValue('@code');
-        $this->_setData($tag, $code, $value);
+        $this->_setData($tag, $code, $value, $index);
       }
       elseif (is_array($subfields)) {
         foreach ($subfields as $subfield) {
           $code = $subfield->getValue('@code');
           $value = $subfield->getValue();
-          $this->_setData($tag, $code, $value);
+          $this->_setData($tag, $code, $value, $index);
         }
       }
+
+      $index++;
     }
     unset($this->result);
   }
 
-  public function getValue($field, $subfield = NULL) {
+  public function getValue($field, $subfield = NULL, $index = 0) {
     if ($subfield != NULL) {
-      if (isset($this->data[$field][$subfield])) {
-        return $this->data[$field][$subfield];
+      if (isset($this->data[$field][$subfield][$index])) {
+        return $this->data[$field][$subfield][$index];
       }
     }
     if (isset($this->data[$field])) {
@@ -78,19 +81,19 @@ class TingMarcxchangeResult {
     return NULL;
   }
 
-  private function _setData($tag, $code, $value) {
-    if (!empty($this->data[$tag][$code])) {
-      if (is_array($this->data[$tag][$code])) {
-        $this->data[$tag][$code][] = $value;
+  private function _setData($tag, $code, $value, $index) {
+    if (!empty($this->data[$tag][$code][$index])) {
+      if (is_array($this->data[$tag][$code][$index])) {
+        $this->data[$tag][$code][$index][] = $value;
       }
       else {
-        $tmp = $this->data[$tag][$code];
-        $this->data[$tag][$code] = array($tmp);
-        $this->data[$tag][$code][] = $value;
+        $tmp = $this->data[$tag][$code][$index];
+        $this->data[$tag][$code][$index] = array($tmp);
+        $this->data[$tag][$code][$index] = $value;
       }
     }
     else {
-      $this->data[$tag][$code] = $value;
+      $this->data[$tag][$code][$index] = $value;
     }
   }
 }

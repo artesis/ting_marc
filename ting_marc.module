@@ -281,6 +281,14 @@ function ting_marc_field_load($entity_type, $entities, $field, $instances, $lang
 }
 
 function ting_marc_get_data($id, $field, $subfield) {
+  // Handle data loading by other modules first.
+  // All results will be merged.
+  $result = module_invoke_all('marcxchange_data', $id, $field, $subfield);
+  if (!empty($result)) {
+    return implode(' ', $result);
+  }
+
+  // Default data loading.
   $object = ting_marc_load_object($id);
   if (empty($object)) {
     return NULL;
