@@ -32,7 +32,7 @@
               field.addClass(nodata);
             }
             else {
-              field.find('.field-item').text(data[_data]);
+              field.find('.field-item').html(data[_data]);
             }
             field.removeClass(processing);
           });
