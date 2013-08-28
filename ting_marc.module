@@ -118,7 +118,12 @@ function ting_marc_permission() {
 function ting_marc_create_field($data) {
   $field_name = $data['field_name'];
 
-  field_delete_field($field_name);
+  $field = field_info_field($field_name);
+  if ($field) {
+    $instance = field_info_instance('ting_object', $field_name, 'ting_object');
+    field_purge_instance($instance);
+    field_purge_field($field);
+  }
 
   $field = array(
     'field_name' => $field_name,
@@ -163,6 +168,7 @@ function ting_marc_create_field($data) {
   $field_group_details = field_group_load_field_group('group_details', 'ting_object', 'ting_object', 'search_result');
   $field_group_details->children[] = $field_name;
   field_group_group_save($field_group_details);
+
   field_cache_clear();
 }
 
