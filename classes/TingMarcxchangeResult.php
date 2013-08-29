@@ -53,7 +53,7 @@ class TingMarcxchangeResult {
       }
       elseif(is_string($subfields)) {
         $value = $subfields;
-        $code = $datafield->getValue('@code');
+        $code = $datafield->getValue('subfield/@code');
         $this->_setData($tag, $code, $value, $index);
       }
       elseif (is_array($subfields)) {
@@ -63,19 +63,21 @@ class TingMarcxchangeResult {
           $this->_setData($tag, $code, $value, $index);
         }
       }
-
       $index++;
     }
     unset($this->result);
   }
 
-  public function getValue($field, $subfield = NULL, $index = 0) {
-    if ($subfield != NULL) {
-      if (isset($this->data[$field][$subfield][$index])) {
+  public function getValue($field, $subfield = NULL, $index = -1) {
+    if ($subfield) {
+      if ($index == -1 && isset($this->data[$field][$subfield])) {
+          return reset($this->data[$field][$subfield]);
+      }
+      elseif (isset($this->data[$field][$subfield][$index])) {
         return $this->data[$field][$subfield][$index];
       }
     }
-    if (isset($this->data[$field])) {
+    elseif (isset($this->data[$field])) {
       return $this->data[$field];
     }
     return NULL;
@@ -89,7 +91,7 @@ class TingMarcxchangeResult {
       else {
         $tmp = $this->data[$tag][$code][$index];
         $this->data[$tag][$code][$index] = array($tmp);
-        $this->data[$tag][$code][$index] = $value;
+        $this->data[$tag][$code][$index][] = $value;
       }
     }
     else {
