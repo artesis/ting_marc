@@ -21,7 +21,7 @@
 
     if (fields.length > 0) {
       $.post(
-        Drupal.settings.basePath + 'ting/marc/fields',
+        Drupal.settings.basePath + Drupal.settings.pathPrefix + 'ting/marc/fields',
         {ting_marc_fields: fields},
         function(data) {
           $('.' + processing, container).each(function(){
