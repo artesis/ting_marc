@@ -159,6 +159,9 @@ function ting_marc_create_field($data) {
       'search_result' => array(
         'label' => 'above',
       ),
+      'mobile_search_result' => array(
+        'label' => 'above',
+      ),
     ),
   );
 
@@ -168,6 +171,13 @@ function ting_marc_create_field($data) {
   $field_group_details = field_group_load_field_group('group_details', 'ting_object', 'ting_object', 'search_result');
   $field_group_details->children[] = $field_name;
   field_group_group_save($field_group_details);
+
+  $field_group_details = field_group_load_field_group('group_details', 'ting_object', 'ting_object', 'mobile_search_result');
+  if (is_object($field_group_details)) {
+    $field_group_details->children[] = $field_name;
+    field_group_group_save($field_group_details);
+  }
+
 
   field_cache_clear();
 }
