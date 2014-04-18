@@ -71,7 +71,14 @@ class TingMarcxchangeResult {
   public function getValue($field, $subfield = NULL, $index = -1) {
     if ($subfield) {
       if ($index == -1 && isset($this->data[$field][$subfield])) {
-          return reset($this->data[$field][$subfield]);
+        $data = $this->data[$field][$subfield];
+        if (is_array($data)) {
+          if (is_array(reset($data))) {
+            return array_map(array($this, 'mergeArray'), $data);
+          }
+          return $this->mergeArray($data);
+        }
+        return $data;
       }
       elseif (isset($this->data[$field][$subfield][$index])) {
         return $this->data[$field][$subfield][$index];
@@ -97,5 +104,9 @@ class TingMarcxchangeResult {
     else {
       $this->data[$tag][$code][$index] = $value;
     }
+  }
+
+  protected function mergeArray($item){
+    return implode(', ', $item);
   }
 }
