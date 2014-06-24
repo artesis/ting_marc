@@ -9,6 +9,11 @@
 
 define('TING_MARC_ADMIN', 'admin/config/ting/marc');
 
+include_once __DIR__.'/ting_marc.client.inc';
+
+drupal_add_css(drupal_get_path('module', 'ting_marc') . '/ting_marc.css');
+drupal_add_js(drupal_get_path('module', 'ting_marc') . '/ting_marc.js');
+
 /**
  * Implements hook_menu().
  */
@@ -64,139 +69,14 @@ function ting_marc_menu() {
     'file' => 'ting_marc.admin.inc',
   );
 
-  return $items;
-}
-
-/**
- * Implements hook_ting_pre_execute().
- *
- * Add "includeMarcXchange" to request.
- */
-function ting_marc_ting_pre_execute($request) {
-  if ($request->getParameter('action') == 'getObjectRequest') {
-    return array('includeMarcXchange' => TRUE);
-  }
-  return array();
-}
-
-/**
- * Implements hook_ting_post_execute().
- */
-function ting_marc_ting_post_execute($request, $response, $raw_response) {
-  if (!$request->getParameter('includeMarcXchange')) {
-    return array();
-  }
-
-  // Does not contain marc data.
-  if (empty($raw_response->searchResponse->result->searchResult[0]->collection->object[0]->collection->record)) {
-    return array();
-  }
-
-  $marc = $raw_response->searchResponse->result->searchResult[0]->collection->object[0]->collection->record;
-
-  // @todo add filter to get only required info.
-  $marc_data = array();
-  foreach ($marc->datafield as $field) {
-    $data = array();
-
-    if (empty($field->subfield)) {
-      continue;
-    }
-
-    // Get data from subfield if it is an object.
-    if (is_object($field->subfield)) {
-      $data[$field->subfield->{'@code'}->{'$'}] = $field->subfield->{'$'};
-    }
-    else {
-      // Subfield is an array.
-      foreach ($field->subfield as $subfield) {
-        // Skip subfields without value.
-        if (empty($subfield->{'$'})) {
-          continue;
-        }
-        $data[$subfield->{'@code'}->{'$'}] = $subfield->{'$'};
-      }
-    }
-
-    if (empty($marc_data[$field->{'@tag'}->{'$'}])) {
-      $marc_data[$field->{'@tag'}->{'$'}] = array();
-    }
-    $marc_data[$field->{'@tag'}->{'$'}] += $data;
-  }
-
-  return array('marcxchange' => $marc_data);
-}
-
-
-/**
- * Implements hook_block_view().
- */
-function ting_marc_block_view($delta = '') {
-  $block = array();
-  switch ($delta) {
-    case 'ting_marc_data':
-      $items = array();
-
-      // Read the object from cache.
-      $trail = menu_get_active_trail();
-      $object_id = $trail[1]['original_map'][2];
-      $object = ting_get_object($object_id);
-
-      if (!$object) {
-        break;
-      }
-
-      $type = $object->getType();
-      $settings = _ting_marc_get_settings($type);
-
-      if (empty($settings) || empty($object->marcxchange)) {
-        break;
-      }
-
-      ting_mark_log(
-        "marcXchange data for object @id<br />Settings: <pre>@settings</pre><br />Data: <pre>@data</pre>",
-        array(
-          '@id' => $object_id,
-          '@settings' => print_r($settings, TRUE),
-          '@data' => print_r($object->marcxchange, TRUE),
-        )
-      );
-
-      $rows = array();
-      foreach ($settings as $s) {
-        if (empty($object->marcxchange[$s->marc_field][$s->marc_subfield])) {
-          continue;
-        }
-
-        $text = $object->marcxchange[$s->marc_field][$s->marc_subfield];
-        $row = array(
-          'label' => $s->marc_label,
-          'text' => $text,
-        );
-        $rows[] = $row;
-      }
-
-      $block['subject'] = NULL;
-      $block['content'] = array(
-        '#theme' => 'ting_marc_data',
-        '#rows' => $rows,
-      );
-      break;
-  }
-
-  return $block;
-}
-
-/**
- * Implements hook_block_info().
- */
-function ting_marc_block_info() {
-  return array(
-    'ting_marc_data' => array(
-      'info' => t('Ting marcXchange data'),
-      'cache' => DRUPAL_CACHE_PER_PAGE,
-    ),
+  $items['ting/marc/fields'] = array(
+    'page callback' => 'ting_marc_field_js',
+    'page arguments' => array(),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
   );
+
+  return $items;
 }
 
 /**
@@ -219,32 +99,6 @@ function _ting_marc_get_settings($type) {
 }
 
 /**
- * Implements hook_theme().
- */
-function ting_marc_theme() {
-  return array(
-    'ting_marc_data' => array(
-      'template' => 'ting_marc_data',
-      'variables' => array('rows' => array()),
-    ),
-  );
-}
-
-/**
- * Log messages to dblog.
- *
- * @param string $message
- *   Message to be logged.
- * @param array $data
- *   Paceholder data for message.
- */
-function ting_mark_log($message, $data=array()) {
-  if (variable_get('ting_mark_logging', 0)) {
-    watchdog('ting_marc', $message, $data, WATCHDOG_DEBUG);
-  }
-}
-
-/**
  * Implements hook_permission().
  */
 function ting_marc_permission() {
@@ -253,4 +107,242 @@ function ting_marc_permission() {
       'title' => t('Administer Ting marcXchange settings'),
     ),
   );
+}
+
+/**
+ * Create/update field using ting_marc settings.
+ *
+ * @param array $data
+ *   A field definition array.
+ */
+function ting_marc_create_field($data) {
+  $field_name = $data['field_name'];
+
+  $field = field_info_field($field_name);
+  if ($field) {
+    $instance = field_info_instance('ting_object', $field_name, 'ting_object');
+    field_purge_instance($instance);
+    field_purge_field($field);
+  }
+
+  $field = array(
+    'field_name' => $field_name,
+    'type' => 'ting_marc',
+    'locked' => FALSE,
+    'default_widget' => 'hidden',
+    'no_ui' => TRUE,
+    'entity_types' => array('ting_object'),
+    'storage' => array(
+      'type' => 'virtual_field',
+    ),
+  );
+  field_create_field($field);
+
+  $instance = array(
+    'field_name' => $field_name,
+    'label' => $data['marc_label'],
+    'bundle' => 'ting_object',
+    'entity_type' => 'ting_object',
+    'settings' => array(
+      'ting_type' => $data['ting_type'],
+      'marc_field' => $data['marc_field'],
+      'marc_subfield' => $data['marc_subfield'],
+      'text_processing' => FALSE,
+    ),
+    'widget' => array(
+      'type' => 'hidden',
+    ),
+    'formatter' => array(
+      'type' => 'ting_marc_ajax_formatter',
+    ),
+    'display' => array(
+      'search_result' => array(
+        'label' => 'above',
+      ),
+      'mobile_search_result' => array(
+        'label' => 'above',
+      ),
+    ),
+  );
+
+  field_create_instance($instance);
+
+  // Add field to group_content group.
+  $field_group_details = field_group_load_field_group('group_details', 'ting_object', 'ting_object', 'search_result');
+  $field_group_details->children[] = $field_name;
+  field_group_group_save($field_group_details);
+
+  $field_group_details = field_group_load_field_group('group_details', 'ting_object', 'ting_object', 'mobile_search_result');
+  if (is_object($field_group_details)) {
+    $field_group_details->children[] = $field_name;
+    field_group_group_save($field_group_details);
+  }
+
+
+  field_cache_clear();
+}
+
+/**
+ * Implements hook_field_info().
+ *
+ * Define 'ting_marc' field type.
+ */
+function ting_marc_field_info() {
+  return array(
+    'ting_marc' => array(
+      'label' => t('Ting marcXchange'),
+      'description' => t('Ting marcXchange field'),
+      'default_widget' => 'hidden',
+      'default_formatter' => 'ting_marc_ajax_formatter',
+      'storage' => array(
+        'type' => 'virtual_field',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_info().
+ *
+ * AJAX formatter for ting_marc fields.
+ */
+function ting_marc_field_formatter_info() {
+  return array(
+    'ting_marc_ajax_formatter' => array(
+      'label' => t('Ajaxified'),
+      'field types' => array('ting_marc'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_info_alter().
+ */
+function ting_marc_field_formatter_info_alter(&$info) {
+  if (isset($info['hidden'])) {
+    $info['hidden']['field types'][] = 'ting_marc';
+  }
+}
+
+/**
+ * Implements hook_widget_info_alter().
+ */
+function ting_marc_widget_info_alter(&$info) {
+  if (isset($info['hidden'])) {
+    $info['hidden']['field types'][] = 'ting_marc';
+  }
+}
+
+function ting_marc_preprocess_field(&$variables, $hook) {
+  if ($variables['element']['#field_type'] == 'ting_marc') {
+    $element = $variables['element'];
+
+    $variables['label_hidden'] = ($element['#label_display'] == 'hidden');
+    $variables['label'] = $variables['label_hidden'] ? NULL : check_plain($element['#title']);
+
+    $variables['items'] = array();
+    foreach ($element['#items'] as $delta => $item) {
+      $variables['items'][$delta] = $element[$delta];
+    }
+
+    $variables['attributes_array'] = array(
+      'data-ting-marc' => $variables['items'][0],
+    );
+
+    $variables['field_name_css'] = strtr($element['#field_name'], '_', '-');
+    $variables['field_type_css'] = strtr($element['#field_type'], '_', '-');
+    $variables['classes_array'] = array(
+      'field',
+      'field-name-' . $variables['field_name_css'],
+      'field-type-' . $variables['field_type_css'],
+      'field-label-' . $element['#label_display'],
+      'ting-marc-unprocessed',
+    );
+
+    if ($element['#label_display'] == 'inline') {
+      $variables['classes_array'][] = 'clearfix';
+    }
+  }
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function ting_marc_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  if ($display['type'] == 'ting_marc_ajax_formatter') {
+    // Check if the field applies to entity.
+    $types = array($entity->getType(), 'All');
+    if (!in_array($instance['settings']['ting_type'], $types)) {
+      return;
+    }
+
+    $element = array();
+    $settings = $instance['settings'];
+    // Build fake value for template preprocessor.
+    $value = $entity->getId() . '|' .$settings['marc_field'] . '|' . $settings['marc_subfield'];
+
+    $element[0]['#markup'] = $value;
+    return $element;
+  }
+}
+
+/**
+ * Implements hook_field_load().
+ */
+function ting_marc_field_load($entity_type, $entities, $field, $instances, $langcode, &$items, $age) {
+  foreach ($entities as $id => $entity) {
+    $items[$id][0]['safe_value'] = '-';
+    $items[$id][0]['value'] = '-';
+  }
+}
+
+function ting_marc_get_data($id, $field, $subfield) {
+  // Handle data loading by other modules first.
+  // All results will be merged.
+  $result = module_invoke_all('marcxchange_data', $id, $field, $subfield);
+  if (!empty($result)) {
+    return implode(' ', $result);
+  }
+
+  // Default data loading.
+  $object = ting_marc_load_object($id);
+  if (empty($object)) {
+    return NULL;
+  }
+  $res = $object->getValue($field, $subfield);
+  return $res;
+}
+
+/**
+ * Implements hook_ting_request_factory().
+ */
+function ting_marc_ting_request_factory() {
+  return array('marcxchange' => 'ting_search_url');
+}
+
+/**
+ * AJAX handler for field.
+ *
+ * @param string $field
+ *   Field name.
+ * @param string $id
+ *   Faust ID.
+ */
+function ting_marc_field_js() {
+  $result = array();
+  if (!empty($_POST['ting_marc_fields'])) {
+    $fields = $_POST['ting_marc_fields'];
+    foreach ($fields as $data) {
+      list($id, $field, $subfield) = explode('|', $data);
+      $value = ting_marc_get_data($id, $field, $subfield);
+      if (!empty($value)) {
+        if (is_array($value)) {
+          $value = implode(', ', $value);
+        }
+        $result[$data] = $value;
+      }
+    }
+  }
+
+  drupal_json_output($result);
 }
