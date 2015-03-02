@@ -1,0 +1,5 @@
+.ting-marc-unprocessed,
+.ting-marc-processing,
+.ting-marc-nodata {
+  display: none;
+}

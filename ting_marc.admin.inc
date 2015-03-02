@@ -20,6 +20,7 @@ function ting_marc_overview_page() {
     t('Field'),
     t('Subfield'),
     t('Label'),
+    t('Field name'),
     array('data' => t('Operations'), 'colspan' => '2'),
   );
   $rows = array();
@@ -29,6 +30,7 @@ function ting_marc_overview_page() {
     $row[] = array('data' => $data['marc_field']);
     $row[] = array('data' => $data['marc_subfield']);
     $row[] = array('data' => $data['marc_label']);
+    $row[] = array('data' => $data['field_name']);
     $row[] = array('data' => l(t('edit'), TING_MARC_ADMIN . '/' . $data['id'] . '/edit'));
     $row[] = array('data' => l(t('delete'), TING_MARC_ADMIN . '/' . $data['id'] . '/delete'));
     $rows[] = $row;
@@ -56,6 +58,7 @@ function ting_marc_edit_item($form, &$form_state, $action, $item = NULL) {
       'marc_field' => '',
       'marc_subfield' => '',
       'marc_label' => '',
+      'field_name' => '',
     );
   }
   else {
@@ -100,6 +103,11 @@ function ting_marc_edit_item($form, &$form_state, $action, $item = NULL) {
     '#required' => TRUE,
   );
 
+  $form['field_name'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $item['field_name'],
+  );
+
   $form['actions']['submit'] = array('#type' => 'submit', '#value' => t('Save'));
 
   return $form;
@@ -109,23 +117,53 @@ function ting_marc_edit_item($form, &$form_state, $action, $item = NULL) {
  * Save setting.
  */
 function ting_marc_edit_item_submit($form, &$form_state) {
+  if (!function_exists('transliteration_get')) {
+    module_load_include('module', 'transliteration');
+  }
+
   $item = &$form_state['values'];
 
   $id = $item['id'];
   $action = $item['action'];
   unset($item['action'], $item['id']);
 
+  if (empty($item['field_name'])) {
+    $value = drupal_html_class($item['ting_type'] . '_' . $item['marc_label']);
+    $value = str_replace('-', '_', $value);
+    $value = transliteration_get($value);
+
+    // Check field_name validity.
+    $field_exists = db_select('ting_marc', 'tm')
+      ->fields('tm', array('field_name'))
+      ->condition('field_name', $value)
+      ->execute()
+      ->rowCount();
+    if ($field_exists) {
+      $value .= substr(md5(microtime()), 0, 6);
+    }
+    // Field name is limited to 32 chars.
+    if (strlen($value) > 32) {
+      // Generate a random name.
+      $value = substr(drupal_html_class($item['ting_type'] . '_' . md5(microtime())), 0, 30);
+    }
+
+    $item['field_name'] = $value;
+  }
+
   $fields = array(
     'ting_type' => $item['ting_type'],
     'marc_field' => $item['marc_field'],
     'marc_subfield' => $item['marc_subfield'],
     'marc_label' => $item['marc_label'],
+    'field_name' => $item['field_name'],
   );
 
   db_merge('ting_marc')
     ->fields($fields)
     ->condition('id', $id)
     ->execute();
+
+  ting_marc_create_field($fields);
 
   $form_state['redirect'] = TING_MARC_ADMIN;
 }
@@ -153,11 +191,19 @@ function ting_marc_delete_item_confirm_submit($form, &$form_state) {
   $id = $form['#marc_id'];
   $form_state['redirect'] = TING_MARC_ADMIN;
 
+  $field = db_select('ting_marc', 'tm')
+    ->fields('tm', array('field_name'))
+    ->condition('id', $id,'=')
+    ->execute()
+    ->fetchAssoc();
+
   db_delete('ting_marc')
     ->condition('id', $id)
     ->execute();
 
-  drupal_set_message(t('Setting has been deleted.'));
+  field_delete_field($field['field_name']);
+  field_cache_clear();
+  drupal_set_message(t('Setting and field as been deleted.'));
 }
 
 /**
@@ -172,6 +218,7 @@ function ting_marc_delete_item_confirm_submit($form, &$form_state) {
 function ting_marc_types($pair = FALSE) {
   // Source: http://www.danbib.dk/docs/abm/types.xml
   $types = array(
+    'All',
     'Akvarel',
     'Anmeldelse',
     'Arkitekturtegning',
