@@ -76,6 +76,14 @@ function ting_marc_menu() {
     'type' => MENU_CALLBACK,
   );
 
+  $items['ting/marc/authors'] = array(
+    'page callback' => 'ting_marc_authors_js',
+    'page arguments' => array(),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'drupal_json_output',
+  );
+
   return $items;
 }
 
@@ -345,4 +353,32 @@ function ting_marc_field_js() {
   }
 
   drupal_json_output($result);
+}
+
+/**
+ * AJAX handler for author field load.
+ *
+ * @return array
+ *   Set of result authors by entity id.
+ */
+function ting_marc_authors_js() {
+  $result = array();
+
+  if (!empty($_POST['marc_authors'])) {
+    $ids = $_POST['marc_authors'];
+
+    foreach ($ids as $id) {
+      $object = ting_marc_load_object($id);
+
+      if (!empty($object)) {
+        $a = $object->getValue('100', 'a');
+        $h = $object->getValue('100', 'h');
+        if (!empty($a) && !empty($h)) {
+          $result[$id] = "$a $h";
+        }
+      }
+    }
+  }
+
+  return $result;
 }
