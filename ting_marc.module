@@ -374,7 +374,7 @@ function ting_marc_authors_js() {
         $a = $object->getValue('100', 'a');
         $h = $object->getValue('100', 'h');
         if (!empty($a) && !empty($h)) {
-          $result[$id] = "$a $h";
+          $result[$id] = "$a, $h";
         }
       }
     }
