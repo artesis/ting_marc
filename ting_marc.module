@@ -373,9 +373,7 @@ function ting_marc_authors_js() {
       if (!empty($object)) {
         $a = $object->getValue('100', 'a');
         $h = $object->getValue('100', 'h');
-        if (!empty($a) && !empty($h)) {
-          $result[$id] = "$a $h";
-        }
+        $result[$id] = implode(', ', array_filter(array($a, $h)));
       }
     }
   }
