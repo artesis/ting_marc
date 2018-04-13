@@ -380,3 +380,21 @@ function ting_marc_authors_js() {
 
   return $result;
 }
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function ting_marc_preprocess_ting_object(&$variables) {
+  $object = $variables['object'];
+  // Processing ting_details_contributor field.
+  $marc_object = ting_marc_load_object($object->ding_entity_id);
+  $data = $marc_object->getValue('700');
+
+  if (!empty($data) && array_values($data['g'])[0] == '1') {
+    $contributor = $variables["content"]["group_details"]["ting_details_contributor"];
+    if (!empty($contributor)) {
+      $contributor[0]['#markup'] = t("@contributor et al.", array('@contributor' => $contributor[0]['#markup']));
+      $variables["content"]["group_details"]["ting_details_contributor"] = $contributor;
+    }
+  }
+}
