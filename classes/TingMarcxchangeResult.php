@@ -29,6 +29,12 @@ class TingMarcxchangeResult {
     $data = reset($data);
     $data = $data->getValue('collection/object');
     $data = reset($data);
+
+    // TODO: This is workaround when item is not accessible anymore.
+    if (!$data instanceof JsonOutput && array_key_exists('error', $data)) {
+      unset($this->result);
+      return;
+    }
     $data = $data->getValue('collection/record/datafield');
 
     if (empty($data)) {
