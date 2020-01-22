@@ -16,6 +16,36 @@ class TingMarcxchangeResult {
   }
 
   /**
+   * Extract marcxchange data.
+   *
+   * @param array $data
+   *   Result received after request.
+   *
+   * @return array|null
+   */
+  public function extractCollection($data) {
+    $collectionData = reset($data);
+
+    // TODO: This is workaround when item is not accessible anymore.
+    if (!$collectionData instanceof JsonOutput && array_key_exists('error', $collectionData)) {
+      unset($this->result);
+      return;
+    }
+
+    // Try to retrieve bibliographic item data.
+    $data = $collectionData->getValue('collection/record/datafield');
+
+    // If `$data` is empty, when assume that collection contains more types of
+    // records, so we will extract the main.
+    if (!isset($data)) {
+      $data_array = $collectionData->getValue('collection/record');
+      $data = $data_array[0]->getValue('datafield');
+    }
+
+    return $data;
+  }
+
+  /**
    * Build items from raw data (json).
    */
   protected function process() {
@@ -28,14 +58,7 @@ class TingMarcxchangeResult {
     $data = $this->result->getValue('searchResponse/result/searchResult');
     $data = reset($data);
     $data = $data->getValue('collection/object');
-    $data = reset($data);
-
-    // TODO: This is workaround when item is not accessible anymore.
-    if (!$data instanceof JsonOutput && array_key_exists('error', $data)) {
-      unset($this->result);
-      return;
-    }
-    $data = $data->getValue('collection/record/datafield');
+    $data = $this->extractCollection($data);
 
     if (empty($data)) {
       unset($this->result);
