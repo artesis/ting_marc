@@ -37,9 +37,14 @@ class TingMarcxchangeResult {
 
     // If `$data` is empty, when assume that collection contains more types of
     // records, so we will extract the main.
-    if (!isset($data)) {
+    if (empty($data)) {
       $data_array = $collectionData->getValue('collection/record');
-      $data = $data_array[0]->getValue('datafield');
+      if ($data_array instanceof JsonOutput) {
+        $data = $data_array->getValue('datafield');
+      }
+      else {
+        $data = $data_array[0]->getValue('datafield');
+      }
     }
 
     return $data;
