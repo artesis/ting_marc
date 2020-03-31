@@ -21,7 +21,7 @@ class TingMarcxchangeResult {
    * @param array $data
    *   Result received after request.
    *
-   * @return array|null
+   * @return array|void|null
    */
   public function extractCollection($data) {
     $collectionData = reset($data);
@@ -39,6 +39,12 @@ class TingMarcxchangeResult {
     // records, so we will extract the main.
     if (empty($data)) {
       $data_array = $collectionData->getValue('collection/record');
+
+      // For some reasons, sometimes item misses 'collection/record' value, then we just skip processing of this item.
+      if (empty($data_array)) {
+        return;
+      }
+
       if ($data_array instanceof JsonOutput) {
         $data = $data_array->getValue('datafield');
       }
