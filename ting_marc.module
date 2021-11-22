@@ -341,7 +341,7 @@ function ting_marc_field_js() {
   if (!empty($_POST['ting_marc_fields'])) {
     $fields = $_POST['ting_marc_fields'];
     foreach ($fields as $data) {
-      list($id, $field, $subfield) = explode('|', $data);
+      [$id, $field, $subfield] = explode('|', $data);
       $value = ting_marc_get_data($id, $field, $subfield);
       if (!empty($value)) {
         if (is_array($value)) {
@@ -388,12 +388,16 @@ function ting_marc_preprocess_ting_object(&$variables) {
   $object = $variables['object'];
   // Processing ting_details_contributor field.
   $marc_object = ting_marc_load_object($object->ding_entity_id);
-  $data = $marc_object->getValue('700');
+  if (!empty($marc_object)) {
+    $data = $marc_object->getValue('700');
+  }
 
-  if (!empty($data) && array_values($data['g'])[0] == '1') {
-    $contributor = $variables["content"]["group_details"]["ting_details_contributor"];
+  if (!empty($data) && isset($data['g']) && array_values($data['g'])[0] == '1') {
+    if (isset($variables['content']['group_details'])) {
+      $contributor = $variables['content']['group_details']['ting_details_contributor'];
+    }
     if (!empty($contributor)) {
-      $contributor[0]['#markup'] = t("@contributor et al.", array('@contributor' => $contributor[0]['#markup']));
+      $contributor[0]['#markup'] = t("@contributor et al.", ['@contributor' => $contributor[0]['#markup']]);
       $variables["content"]["group_details"]["ting_details_contributor"] = $contributor;
     }
   }
