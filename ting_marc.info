@@ -2,7 +2,7 @@ name = Ting marcXchange
 description = Displays additional data for Ting objects.
 package = Artesis
 core = 7.x
-version = 7.x-4.4
+version = 7.x-5.0.0
 
 config = admin/config/ting/marc/settings
 
